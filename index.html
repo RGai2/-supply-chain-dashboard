@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Scenario Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 20px 40px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            display: flex;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 20px auto;
+            gap: 20px;
+        }
+        .sidebar {
+            flex: 0 0 350px;
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+        }
+        .main-content {
+            flex: 1;
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+        }
+        h2, h3 {
+            color: #34495e;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .param-group {
+            margin-bottom: 25px;
+        }
+        .param-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.95em;
+        }
+        .param-group select, .param-group input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .param-group input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #dcdcdc;
+            outline: none;
+            border-radius: 5px;
+            padding: 0;
+        }
+        .param-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: 2px solid #2980b9;
+        }
+        .param-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: 2px solid #2980b9;
+        }
+        .param-value {
+            float: right;
+            font-weight: bold;
+            color: #3498db;
+            font-size: 1.1em;
+        }
+        .chart-container {
+            margin-top: 30px;
+            position: relative;
+            height: 450px;
+            width: 100%;
+        }
+        .alert-section {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-family: 'Roboto', sans-serif;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        .alert-section strong {
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .alert-section small {
+            font-size: 0.9em;
+            display: block;
+            margin-top: 8px;
+        }
+        .alert-excellent {
+            background-color: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        .alert-good {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+        .alert-warning-light {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        .alert-warning {
+            background-color: #ffe5d0;
+            color: #d35400;
+            border: 2px solid #ffb74d;
+        }
+        .alert-infeasible {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        .week-detail {
+            margin-top: 30px;
+            font-size: 0.75em;
+            overflow-x: auto;
+        }
+        .week-detail table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .week-detail th, .week-detail td {
+            padding: 6px;
+            text-align: right;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+        }
+        .week-detail th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .week-detail tr:hover {
+            background-color: #f8f9fa;
+        }
+        .negative {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 0.9em;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Supply Chain Performance Dashboard</h1>
+        <p>Real-time scenario analysis: Feasibility, Sales Forecast, Network Utilization & Overperformance</p>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Scenario Parameters</h2>
+            
+            <div class="param-group">
+                <label for="profileSelect">Profile:</label>
+                <select id="profileSelect" onchange="updateDashboard()">
+                    <option value="Strong">Strong</option>
+                    <option value="Very strong">Very strong</option>
+                    <option value="Super strong" selected>Super strong</option>
+                </select>
+            </div>
+
+            <div class="param-group">
+                <label for="lifespanSelect">Lifespan [months]:</label>
+                <select id="lifespanSelect" onchange="updateDashboard()">
+                    <option value="3" selected>3</option>
+                </select>
+            </div>
+
+            <div class="param-group">
+                <label for="wwBuySlider">WW Buy [pces]:</label>
+                <input type="range" id="wwBuySlider" min="200" max="2500" value="1000" step="100" oninput="updateDashboard()">
+                <span id="wwBuyValue" class="param-value">1000</span>
+            </div>
+
+            <div class="param-group">
+                <label for="prodDeliveredSlider">Prod Delivered at LW [% buy]:</label>
+                <input type="range" id="prodDeliveredSlider" min="40" max="100" value="50" step="5" oninput="updateDashboard()">
+                <span id="prodDeliveredValue" class="param-value">50%</span>
+            </div>
+
+            <div class="param-group">
+                <label for="networkSlider">Offer (Network) [stores]:</label>
+                <input type="range" id="networkSlider" min="100" max="450" value="400" step="50" oninput="updateDashboard()">
+                <span id="networkValue" class="param-value">400</span>
+            </div>
+            
+            <div class="alert-section" id="statusAlert">
+                Adjust parameters to see scenario details.
+            </div>
+        </div>
+
+        <div class="main-content">
+            <h2>Weekly Performance Overview (4-Week Simulation)</h2>
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+            
+            <div class="week-detail">
+                <h3>Weekly Breakdown</h3>
+                <table id="weeklyTable">
+                    <thead>
+                        <tr>
+                            <th>Profile</th>
+                            <th>Lifespan [months]</th>
+                            <th>Week</th>
+                            <th>WW buy [pces]</th>
+                            <th>Prod delivered at LW [% buy]</th>
+                            <th>Offer [stores]</th>
+                            <th>Prod</th>
+                            <th>Sales</th>
+                            <th>Flow</th>
+                            <th>Remaining pces after sales & flow</th>
+                            <th>Remaining pces in network</th>
+                            <th>Remaining network covered %</th>
+                            <th>Pces to overperf above network</th>
+                            <th>Overperf with untouched network</th>
+                            <th>Feasibility flag</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        &copy; 2025 Supply Chain Simulator - Real-time Calculations
+    </div>
+
+    <script>
+        const profileData = [
+            { profile: 'Strong', week: 0, buyPercent: 0.05 },
+            { profile: 'Strong', week: 1, buyPercent: 0.10 },
+            { profile: 'Strong', week: 2, buyPercent: 0.07 },
+            { profile: 'Strong', week: 3, buyPercent: 0.05 },
+            { profile: 'Very strong', week: 0, buyPercent: 0.10 },
+            { profile: 'Very strong', week: 1, buyPercent: 0.20 },
+            { profile: 'Very strong', week: 2, buyPercent: 0.14 },
+            { profile: 'Very strong', week: 3, buyPercent: 0.10 },
+            { profile: 'Super strong', week: 0, buyPercent: 0.15 },
+            { profile: 'Super strong', week: 1, buyPercent: 0.30 },
+            { profile: 'Super strong', week: 2, buyPercent: 0.21 },
+            { profile: 'Super strong', week: 3, buyPercent: 0.15 }
+        ];
+
+        function calculateScenario(profile, lifespan, wwBuy, prodDelivered, network) {
+            const profileWeeks = profileData.filter(p => p.profile === profile);
+            const initialProd = wwBuy * (prodDelivered / 100);
+            
+            let weeklyData = [];
+            let cumSales = 0;
+            
+            for (let week = 0; week <= 3; week++) {
+                const weekProfile = profileWeeks.find(p => p.week === week);
+                const prod = (week === 0) ? initialProd : 0;
+                const sales = wwBuy * weekProfile.buyPercent;
+                
+                let flow = 0;
+                if (week < 3) {
+                    const nextWeekProfile = profileWeeks.find(p => p.week === week + 1);
+                    flow = wwBuy * nextWeekProfile.buyPercent;
+                }
+                
+                cumSales += sales;
+                const remainingAfterSalesFlow = initialProd - cumSales - flow;
+                
+                // Remaining pces in network = MIN(Offer, Remaining after sales & flow)
+                const remainingInNetwork = Math.min(network, remainingAfterSalesFlow);
+                
+                // Remaining network covered % = Remaining in network / Network
+                const remainingNetworkCoveredPercent = remainingInNetwork / network;
+                
+                const pcesToOverperf = Math.max(0, remainingAfterSalesFlow - network);
+                
+                let overperfPercent = 0;
+                if (pcesToOverperf > 0 && cumSales > 0) {
+                    overperfPercent = (pcesToOverperf / cumSales);
+                }
+                
+                const feasibilityFlag = remainingAfterSalesFlow < 0 ? 1 : 0;
+                
+                weeklyData.push({
+                    week,
+                    prod,
+                    sales,
+                    flow,
+                    cumSales,
+                    remainingAfterSalesFlow,
+                    remainingInNetwork,
+                    remainingNetworkCoveredPercent,
+                    pcesToOverperf,
+                    overperfPercent,
+                    feasibilityFlag
+                });
+            }
+            
+            const isInfeasible = weeklyData.some(w => w.remainingAfterSalesFlow < 0);
+            
+            return {
+                initialProd,
+                network,
+                weeklyData,
+                isInfeasible
+            };
+        }
+
+        const ctx = document.getElementById('performanceChart');
+        const performanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Week 0', 'Week 1', 'Week 2', 'Week 3'],
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Remaining network covered %',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: function(context) {
+                            const value = context.parsed ? context.parsed.y : 0;
+                            if (value < 0) return 'rgba(231, 76, 60, 0.7)';
+                            else if (value < 0.5) return 'rgba(243, 156, 18, 0.7)';
+                            else if (value < 1) return 'rgba(241, 196, 15, 0.7)';
+                            else return 'rgba(46, 204, 113, 0.7)';
+                        },
+                        borderColor: function(context) {
+                            const value = context.parsed ? context.parsed.y : 0;
+                            if (value < 0) return 'rgba(192, 57, 43, 1)';
+                            else if (value < 0.5) return 'rgba(211, 84, 0, 1)';
+                            else if (value < 1) return 'rgba(183, 149, 11, 1)';
+                            else return 'rgba(39, 174, 96, 1)';
+                        },
+                        borderWidth: 2,
+                        order: 2
+                    },
+                    {
+                        type: 'line',
+                        label: 'Sales [pces]',
+                        data: [0, 0, 0, 0],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: false,
+                        tension: 0.3,
+                        borderWidth: 3,
+                        yAxisID: 'y1',
+                        order: 1
+                    },
+                    {
+                        type: 'line',
+                        label: 'Overperf above Network',
+                        data: [0, 0, 0, 0],
+                        borderColor: '#9b59b6',
+                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        fill: false,
+                        yAxisID: 'y2',
+                        tension: 0.3,
+                        borderWidth: 3,
+                        borderDash: [5, 5],
+                        order: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Network Coverage (%)',
+                            font: { weight: 'bold', size: 14 }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value * 100).toFixed(0) + '%';
+                            }
+                        },
+                        grid: {
+                            color: '#ecf0f1'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Sales [pces]',
+                            font: { weight: 'bold', size: 14 }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: false,
+                        beginAtZero: true,
+                        max: 3
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (label.includes('network covered')) {
+                                    label += (context.raw * 100).toFixed(0) + '%';
+                                } else if (label.includes('Overperf')) {
+                                    label += (context.raw * 100).toFixed(0) + '%';
+                                } else {
+                                    label += Math.round(context.raw);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function updateDashboard() {
+            const profile = document.getElementById('profileSelect').value;
+            const lifespan = parseInt(document.getElementById('lifespanSelect').value);
+            const wwBuy = parseInt(document.getElementById('wwBuySlider').value);
+            const prodDelivered = parseInt(document.getElementById('prodDeliveredSlider').value);
+            const network = parseInt(document.getElementById('networkSlider').value);
+
+            document.getElementById('wwBuyValue').textContent = wwBuy;
+            document.getElementById('prodDeliveredValue').textContent = prodDelivered + '%';
+            document.getElementById('networkValue').textContent = network;
+
+            const scenario = calculateScenario(profile, lifespan, wwBuy, prodDelivered, network);
+
+            // Update chart
+            performanceChart.data.datasets[0].data = scenario.weeklyData.map(w => w.remainingNetworkCoveredPercent);
+            performanceChart.data.datasets[1].data = scenario.weeklyData.map(w => w.sales);
+            performanceChart.data.datasets[2].data = scenario.weeklyData.map(w => w.overperfPercent);
+            performanceChart.update();
+
+            // Update table
+            const tableBody = document.getElementById('weeklyTableBody');
+            tableBody.innerHTML = '';
+            scenario.weeklyData.forEach(w => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${profile}</td>
+                    <td>${lifespan}</td>
+                    <td>${w.week}</td>
+                    <td>${wwBuy}</td>
+                    <td>${prodDelivered}%</td>
+                    <td>${network}</td>
+                    <td>${w.prod.toFixed(0)}</td>
+                    <td>${w.sales.toFixed(0)}</td>
+                    <td>${w.flow.toFixed(0)}</td>
+                    <td class="${w.remainingAfterSalesFlow < 0 ? 'negative' : ''}">${w.remainingAfterSalesFlow.toFixed(0)}</td>
+                    <td class="${w.remainingInNetwork < 0 ? 'negative' : ''}">${w.remainingInNetwork.toFixed(0)}</td>
+                    <td class="${w.remainingNetworkCoveredPercent < 0 ? 'negative' : ''}">${(w.remainingNetworkCoveredPercent * 100).toFixed(0)}%</td>
+                    <td>${w.pcesToOverperf.toFixed(0)}</td>
+                    <td>${(w.overperfPercent * 100).toFixed(0)}%</td>
+                    <td>${w.feasibilityFlag ? 'Alert' : ''}</td>
+                `;
+            });
+
+            // Update alert
+            const statusAlert = document.getElementById('statusAlert');
+            const finalWeek = scenario.weeklyData[3];
+            const finalCoverage = finalWeek.remainingNetworkCoveredPercent * 100;
+            const finalOverperf = finalWeek.overperfPercent * 100;
+            
+            if (scenario.isInfeasible) {
+                statusAlert.className = 'alert-section alert-infeasible';
+                statusAlert.innerHTML = `<strong>🔴 INFEASIBLE SCENARIO</strong>
+                    Stock becomes negative during simulation
+                    <small>Week 3: Coverage = ${finalCoverage.toFixed(1)}% | Overperf above network = ${finalOverperf.toFixed(1)}%</small>`;
+            } else if (finalCoverage >= 0 && finalCoverage <= 50) {
+                statusAlert.className = 'alert-section alert-warning';
+                statusAlert.innerHTML = `<strong>🟠 FEASIBLE</strong>
+                    Network coverage below 50%
+                    <small>Week 3: Coverage = ${finalCoverage.toFixed(1)}% | Overperf above network = ${finalOverperf.toFixed(1)}%</small>`;
+            } else if (finalCoverage > 50 && finalCoverage < 100) {
+                statusAlert.className = 'alert-section alert-warning-light';
+                statusAlert.innerHTML = `<strong>🟡 FEASIBLE</strong>
+                    Network coverage below 100%
+                    <small>Week 3: Coverage = ${finalCoverage.toFixed(1)}% | Overperf above network = ${finalOverperf.toFixed(1)}%</small>`;
+            } else if (finalOverperf >= 0 && finalOverperf < 30) {
+                statusAlert.className = 'alert-section alert-good';
+                statusAlert.innerHTML = `<strong>🟢 FEASIBLE - GOOD</strong>
+                    Adequate stock levels maintained
+                    <small>Week 3: Coverage = ${finalCoverage.toFixed(1)}% | Overperf above network = ${finalOverperf.toFixed(1)}%</small>`;
+            } else {
+                statusAlert.className = 'alert-section alert-excellent';
+                statusAlert.innerHTML = `<strong>🟢 FEASIBLE - EXCELLENT</strong>
+                    Strong overperformance potential (≥30%)
+                    <small>Week 3: Coverage = ${finalCoverage.toFixed(1)}% | Overperf above network = ${finalOverperf.toFixed(1)}%</small>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboard();
+        });
+    </script>
+</body>
+</html>
